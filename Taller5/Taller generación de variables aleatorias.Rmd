@@ -1,0 +1,201 @@
+---
+title: "Grupo 3 Taller generación de variables aleatorias "
+output: html_notebook
+---
+
+**Hecho por:**
+
+- Nicolás Galván <br>
+- Hazel Pinzón <br>
+- David Rojas <br>
+
+1) Use el método de inversión para generar una variable aleatoria que tenga la siguiente función de distribución acumulativa: $F(x)={(x^{2}+x)/2}, 0≤x≤1$ 
+
+<h1>Solución Primer Punto</h1>
+
+se halla la función inversa teniendo en cuenta:
+
+$$g~U(0,1)$$
+
+se procede a reescribir la función:
+
+$$2g=x^2+x$$
+
+$$x^2+x-2g=0$$
+
+se usa la función cuadratica para obtener las siguientes funciones:
+
+$$X=\dfrac{-1+\sqrt{1-8g}}{2}$$
+
+$$X=\dfrac{-1-\sqrt{1-8g}}{2}$$
+
+ahora se usa la primera función ya que esta se encuentra en el dominio de 0<x<1
+
+acontinuación se resuelve apartir de una simulación
+
+```{r}
+library("MASS")
+invExp <- function(n) 
+{
+  g <- runif(n)
+  x <- (sqrt((8*g)))/2
+  return(x)
+}
+
+
+plot1 <- function(n){
+  sample <- invExp(10000)
+  truehist(sample, nbins = 40, col = "cyan", xlab = "",xlim=c(0,1),ylim=c(0,1.5))
+  curve((x*x+x)/2, from = 0, to= 1, add = TRUE)
+}
+  
+plot1(sample)
+
+```
+
+2) Utilice una función g(x) de su elección (diferente a la distribución uniforme)  para generar mediante el método del rechazo la siguiente función de densidad: $f(x)=xe^{-x}$ 
+
+<h1>Solución Segundo Punto</h1>
+
+$$f(x)=xe^{-x}$$
+
+se usa
+
+$$g(x)=e^{x}$$
+
+se deriva la función para hallar el valor de la constante el cuál es el siguiente:
+
+$$e^{-2x}(1-2x)=0$$
+
+con lo que se obtiene lo siguiente: 
+
+$$C=\dfrac{1}{2}$$
+
+
+$$\dfrac{f(x)}{Cg(x)}=\dfrac{2xe^{-x}}{e^{x}}$$
+```{r}
+rsBeta <- function(n) {
+  z <- runif(n)
+  u <- runif(n)
+  ind <- (u <= (2)*z*exp(-z)/exp(z))
+  return(z[ind])
+}
+set.seed(123)
+sample1 <- rsBeta(10000)
+acceptS <- length(sample1) / 10000
+1-acceptS
+
+## ---- echo=TRUE, tidy=FALSE----------------------------------------------
+library(MASS)
+plot1 <- function(s, shape1=1.6, shape2=1.4){
+  truehist(s, h = 0.1, xlim = c(0, 1), #ylim = c(0,2), 
+  			col="white", main = "", xlab = "")
+  curve(dbeta(x, shape1 = shape1, shape2 = shape2),
+        from = 0, to = 1, add = TRUE)
+  d <- density(s, from = 0, to = 1, adjust = 2, 
+               kernel = "gaussian")
+  lines(d$x, d$y, lty = 2)
+  legend("topright", 
+         legend = c("true density",	"density of simulated values"), 
+         col = c(1, 1), lty = c(1, 2), cex = 0.6)	
+}
+
+## ----B05113_04_15--------------------------------------------------------
+plot1(sample1) # produces a histgram and curve, shown below:
+
+
+```
+
+3) Una serie de buses llega a un evento deportivo de acuerdo a un proceso de Poisson con tasa media de 5 por hora. Cada bus tiene igual probabilidad de tener 20, 21, ... 40 aficionados. El número de aficionados en diferentes buses es independiente. Escriba un algoritmo que simule la llegada de aficionados en el tiempo t=1.
+
+<h1>Solución Tercer Punto</h1>
+
+```{r}
+#proceso de Poisson homogéneo de parámetro lambda
+
+procpois.H<-function(T,lambda)
+{
+S<-vector()
+t<-0;I<-0   
+    repeat 
+    {
+    u1<-runif(1); t<-t-(1/lambda)*log(u1)
+      if (t>T) break else {I<-I+1;S[I]<-t}
+    }
+return(S)
+}
+
+n_events<-c()
+for(i in 1:50){
+  llegadas <- procpois.H(1,5)
+  #procpois.H(12,8)
+  #print(llegadas)
+
+  n_events[i]<-length(llegadas)
+}
+
+hist(n_events)
+llegadas
+```
+
+4) Escriba un programa que genere un proceso de Poisson no homogéneo con función de intensidad
+
+$λ(t)=3 + 4/(t+1)$ 
+
+Describa y justifique la solución. Verifique que el programa aproxima adecuadamente el proceso Poisson no homogéneo.
+
+
+<h1>Cuarto punto</h1>
+
+$λ(0)=3 + 4/((0)+1)$
+
+$λ(0)=7$ 
+ 
+Por lo tanto si $t-\dfrac{1}{7}logU   >  Tmax$ se finaliza el programa 
+sino se genera V lo que nos lleva a $V<λ(t)/λ$
+
+$I=I+1$
+
+$S[I]=t$
+
+donde I= numero de eventos 
+
+
+S[1], S[2],.. =tiempo de eventos
+
+y asi se sigue iterando hasta conseguir la condicion
+
+$t=t-\dfrac{1}{7}logU$
+
+$t  >  Tmax$
+
+```{r}
+lambda<-function(x) 3+4/(x+1)
+curve(lambda(x),xlim=c(0,9),ylab="lambda(x)",col="red")
+S<-vector() #tiempo de eventos
+u1<-vector() #vector que almacenara la distribucion uniforme
+u2<-vector()
+procpois<-function(Tmax) {
+  t<-0;I<-0  
+      for (i in 1:999) {
+                          u1[i]<-runif(1);   t<-t-((1/7)*log(u1[i]))
+                          if (t>Tmax) {print(i); break}
+                          if (t<=Tmax) u2[i]<-runif(1)
+                          if(u2[i]<=(lambda(t)/7)) {I<-I+1;S[I]<-t}}
+    print("S")
+    print(S)
+    print("tasa de aceptación")
+    print(length(S)/i)
+    print("número medio de realizaciones")
+    print(i/length(S))
+    hist(S)
+    curve(lambda(x),xlim=c(0,20),ylab="lambda(x)",col="red",add=TRUE)
+  }
+
+procpois(20)
+```
+
+
+
+
+

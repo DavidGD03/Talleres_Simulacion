@@ -1,0 +1,352 @@
+---
+title: "Taller análisis de datos simulados"
+output: html_notebook
+---
+
+**Hecho por: (Grupo 3)**
+
+- Nicolás Galván <br>
+- Hazel Pinzón <br>
+- David Rojas <br>
+
+
+### 1) Realice el problema 2 del “TALLER ENFOQUE DE SIMULACIÓN BASADO EN EVENTOS DISCRETOS”
+
+##### a) Calcule la estimación del Tiempo esperado de colapso (media muestral) y su la varianza esperada que tiene ese estimador para las 100 réplicas de simulación. Asuma que las unidades de tiempo de las funciones de distribución F y G están en horas.
+
+```{r}
+#Función correspondiente a la distribución de probabilidad de fallar la máquina
+F <- function(n=1, lambda=1){
+    return((-1/lambda)*log(runif(n)))
+}
+
+
+#Función correspondiente a la distribución de probabilidad de ser arreglada la máquina
+G <- function(n=1, lambda=2){
+    return((-1/lambda)*log(runif(n)))
+  }
+```
+
+```{r}
+ maquina <- function(fallar=F, arreglar=G){
+    
+    n <- 4
+    s <- 3
+    T <- 0
+    
+    tFallo <- sort(fallar(4), decreasing=FALSE)
+    tReparacion <- Inf
+    
+    
+    while(TRUE){
+      
+      if(tFallo[1] < tReparacion){
+        t <- tFallo[1]
+        s <- s-1
+        tFallo <- sort(c(tFallo[-1], t+fallar()), decreasing=FALSE)
+        
+        if(s == -1){
+          break
+        }
+        else if(s == 2){
+          tReparacion <- t + arreglar()
+        }
+      }
+      
+      
+      else{
+        t <- tReparacion
+        s <- s+1
+        
+        if(s == 3){
+          tReparacion <- Inf
+        }
+        else{
+          tReparacion <- t + arreglar()
+        }
+      }
+    }
+    
+    return(t)
+  }
+```
+
+```{r}
+  tColapso <- c() # tiempos de colapso
+  
+  for(k in seq(100)){
+    tColapso <- c(tColapso, maquina())
+  }
+
+  mediaColapsos <- sum(tColapso)/length(tColapso)
+  varColapsos <- var(tColapso) # varianza de los colapsos
+  
+  cat("El tiempo esperado de colapso (media) es: ",mediaColapsos,"\n")
+  cat("La varianza esperada de colapsos es: ",varColapsos)
+```
+
+##### b) Use el método visto en clase para determinar el número de réplicas de simulación que permitan realizar una buena  estimación puntual del Tiempo esperado de colapso, con un error máximo de 6 minutos para la desviación estándar.
+```{r}
+ 
+  tColapso <- c() # tiempos de colapso
+  error <- 0.1  #esto equivale a 6 minutos en 1 hora
+  
+  for(k in seq(10)){
+    tColapso <- c(tColapso,maquina())
+  }
+
+  tMedia <- mean(tColapso) # media de tiempo
+  tVarianza <- var(tColapso) # varianza de tiempo
+  
+  while (TRUE){
+    k <- k+1
+    if(!sqrt(tVarianza/k) >= error){
+      break;
+    }
+    tColapso  <- c(tColapso , maquina())
+    promedio <- tMedia + (tColapso[k] - tMedia)/k
+    tVarianza <- (1-1/(k-1))*tVarianza + k*(promedio - tMedia)^2
+    tMedia <- promedio
+    
+  }
+```
+
+```{r}
+cat("Se realizaron ", k," número de réplicas/iteraciones \n")
+cat("La media de tiempo fue de: ", tMedia,"\n")
+cat("La varianza de tiempo fue de: ", tVarianza,"\n")
+
+```
+
+##### c) Use el método visto en clase para determinar un intervalo de confianza del 97% para el tiempo esperado de colapso, y con un error máximo de 5 minutos. Reporte el intervalo de confianza y el número de iteraciones.
+
+```{r}
+  tColapso <- c()
+  error <- 1/12 #esto equivale a 5 minutos en 1 hora
+  Z <- qnorm(1-0.015)
+  
+  # Hacemos las 100 repeticiones base
+  for(k in seq(10)){
+    tColapso <- c(tColapso, maquina())
+  }
+
+  tMedia <- mean(tColapso)
+  tVarianza <- var(tColapso)
+  
+  while(2*Z*sqrt(tVarianza/k) >= error){
+    k <- k+1
+    tColapso <- c(tColapso, maquina())
+    promedio <- tMedia + (tColapso[k] - tMedia)/k
+    tVarianza <- (1-1/(k-1))*tVarianza + k*(promedio - tMedia)^2
+    tMedia <- promedio
+  }
+```
+
+```{r}
+cat("Se realizaron ", k," número de iteraciones \n")
+cat("La media de tiempo fue de: ", tMedia,"\n")
+cat("La varianza de tiempo fue de: ", tVarianza,"\n")
+```
+
+### 2) Realice el problema 3 del Parcial 2.
+
+##### a) Suponga que estamos interesados en estimar el número promedio de clientes perdidos en el tiempo T, donde un cliente que sale del sistema antes de ser atendido se considera perdido. Suponga que el proceso de Poisson tiene una tasa de 5, F es una distribución uniforme en el intervalo (0,5); y G es una variable aleatoria exponencial con tasa de 4. Las unidades de tiempo para el proceso de Poisson, para F y G están en horas. Implemente el modelo para realizar una simulación. Posteriormente, realice 500 réplicas de simulación para estimar el número esperado de clientes perdidos hasta el tiempo T=100 horas
+
+Proceso de poisson no homogeneo que determinara los tiempos de llegada de los clientes.
+```{r}
+tiempoLlegada <- function(Tmax, lambda) {
+  S<-c()
+  t<-0
+  I<-0 
+
+  while(TRUE){
+    u1 <- runif(1)
+    t <- t - (1/lambda)*log(u1)
+    if (t > Tmax) break
+    else {
+      I <- I + 1
+      S[I] <- t
+    }
+  }
+  return(S)
+}
+```
+F es una distribucion uniforme en el intervalo (0,5) y determina la cantidad aleatoria de tiempo que esperara cada cliente antes de abandonar la cola
+```{r}
+F <- function() {
+  runif(1,0,5)
+}
+
+
+
+```
+G es una variable aleatoria exponencial de tasa 4 y determina el tiempo de atencion del servidor.
+```{r}
+G <- function(){
+  -log(runif(1)) / 4
+} 
+```
+
+```{r}
+  ModeloCola <- function(LL, cierre) {
+    
+  t <- 0                    # tiempo
+  NLL <- 0          # numero de llegadas en el instante t
+  NS <- 0           # numero de salidas en el instante t
+  n <- 0                    # clientes en el sistema
+  TAtencion <- vector()   # tiempos de atención del servidor
+  salidas <- vector()       # instantes de salida
+  clientes <- vector()      # clientes en el sistema
+  
+  
+  tLL <- LL[1]              # instante de llegada del cliente 1
+  tS <- Inf                 # instante salida cliente
+  tm <- vector()            # tiempo cliente en el sistema
+  i <- 1
+  j <- 1
+  
+  tmpEspera <- Inf          # tiempo de espera de los clientes
+  ClientesPerdidos <- 0          # cantidad de clientes perdidos
+  
+  
+  while (TRUE) {
+    
+    # Caso 1
+    
+    if((tLL <= tS) & (tLL <= cierre)) {
+      t <- tLL                   
+      NLL <- NLL + 1            
+      i <- i + 1
+      tLL <- LL[i]            
+      n <- n + 1                
+      clientes[length(clientes) + 1] <- n 
+      
+      if(n == 1) {            
+        TAtencion[j] <- G()     
+        tS <- t + TAtencion[j]      
+        j <- j + 1  
+      } else {
+        ES <- F()
+        if (length(tmpEspera) <= 1) tmpEspera <- t + ES
+        else tmpEspera[length(tmpEspera) + 1] <- t + ES  
+      }
+      
+    }
+    
+    # Caso 2
+    
+    if((tS <= tLL) & tS <= cierre) {
+      t <- tS
+      NS <- NS + 1
+      n <- n - 1
+      clientes[length(clientes) + 1] <- n
+      salidas[NS] <- t
+      tm[NS] <- salidas[NS] - LL[NS]    
+        
+      if (n == 0) {
+        tS <- Inf # 
+        tmpEspera <- Inf # 
+      }
+      if (n > 0) { 
+        TAtencion[j] <- G()   
+        tS <- t + TAtencion[j]
+        j <- j + 1
+        if (length(tmpEspera) <= 1) tmpEspera <- Inf 
+        else tmpEspera <- tmpEspera[2:length(tmpEspera)] 
+      }
+    }
+    
+    # después de la hora de cierre
+    # Caso 3 
+    
+    if(min(tLL,tS) > cierre) {  # hay clientes en el sistema
+      if (n > 0) {              # si hay clientes generar tiempo de sevicio
+        t <- tS         
+        NS <- NS + 1        
+        n <- n - 1
+        clientes[length(clientes) + 1] <- n
+        salidas[NS] <- t
+        tm[NS] <- salidas[NS] - LL[NS]
+        if (n > 0) {        
+          TAtencion[j] <- G()   
+          tS <- t + TAtencion[j]
+          j <- j + 1
+          if (length(tmpEspera) <= 1) tmpEspera <- Inf # Ya no hay clientes en la cola
+          else tmpEspera <- tmpEspera[2:length(tmpEspera)] # Se atiende el primer cliente que ingresó a la cola
+        }
+        
+      }
+      
+      # Caso 4
+      if (n == 0) { # si no quedan clientes 
+        Tp <- max(t - cierre, 0)
+        break           
+      }
+    }
+    
+    # Caso 5 - El cliente se cansa de esperar
+    
+    if(tmpEspera[1] < tS & n > 0) {
+      if (length(tmpEspera) <= 1) tmpEspera <- Inf # Se pierde el  cliente que ingresó a la cola
+      else tmpEspera <- tmpEspera[2:length(tmpEspera)]
+      ClientesPerdidos <- ClientesPerdidos + 1          
+      n <- n -1
+    }
+    
+  }
+  
+  if(tS == Inf) tS <- t
+  
+  return(ClientesPerdidos)
+}
+```
+
+```{r}
+LL <- tiempoLlegada(100, 5)
+LL[length(LL) + 1] <- Inf
+tcierre <- 100
+
+c <- clientes(LL, tcierre)
+cat(c," clientes"," perdidos")
+```
+
+```{r}
+clientesProm<-c()
+for(i in seq(500)){
+  clientesProm<-c(clientesProm,clientes(LL,tcierre))
+}
+
+clientesPerMedia<-sum(clientesProm)/i
+cat(" media de ",clientesPerMedia," clientes perdidos")
+```
+
+##### b) Use el método descrito en clase para determinar un intervalo de confianza del 99% para la cantidad de clientes perdidos durante las 100 horas de servicio.
+```{r}
+  ClientesPerdidos <- c()
+  error <- 2 
+  Z <- qnorm(1-0.005)
+  
+  # Haciendo las 100 repeticiones base
+  for(k in seq(10)){
+    ClientesPerdidos <- c(ClientesPerdidos, clientes(LL,tcierre))
+  }
+
+  mediaCli <- mean(ClientesPerdidos)
+  varianzaCli <- var(ClientesPerdidos)
+  
+  # Se sigue repitiendo hasta obtener un error menor al deseado.
+  while(2*Z*sqrt(varianzaCli/k) >= error){
+    k <- k+1
+    cliPerdidos <- c(cliPerdidos, clientes(LL,tcierre))
+    promedio <- mediaCli + (cliPerdidos[k] - mediaCli)/k
+    varianzaCli <- (1-1/(k-1))*varianzaCli + k*(promedio - mediaCli)^2
+    mediaCli <- promedio
+  }
+  
+```
+
+```{r}
+cat( k," iteraciones realizadas \n")
+cat("La media de clientes perdidos fue: ", mediaCli,"\n")
+cat("La varianza de clientes perdidos fue: ", varianzaCli,"\n")
+```

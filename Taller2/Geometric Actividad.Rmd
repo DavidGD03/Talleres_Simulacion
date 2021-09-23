@@ -1,0 +1,135 @@
+---
+title: "Generación de variables aleatorias geométricas"
+output: html_notebook
+---
+
+<b> Integrantes: </b>
+
+- David Felipe Rojas Casadiego. 
+- Hazel David Pinzón Uribe. 
+- Nicolás Galván Alvarez. 
+
+<br/>
+
+<b> 1. Definición </b>
+
+la distribucion geometrica esta basada en un experimento de bernoulli(experimento con dos resultados posibles: exito y fracaso) P(exito)=p, P(fracaso)=1-p, la variable geometrica X es el numero de repeticiones hasta que se obtiene el primer exito.
+
+X->geometrica(p)   0<p<1
+
+Recorrido de X = (1,2,3,...,) = Naturales
+
+\[P\left\lbrace{X = i}\right\rbrace = pq^{i-1},\; i \geq 1,\; donde\ q=1-p\]
+
+<b> 2. Demostración </b>
+
+Se puede pensar que X representa el momento del primer éxito cuando se realizan ensayos independientes, cada uno de los cuales es un éxito con probabilidad p. Desde
+
+\[\sum_{i=1}^{j-1}p\{X=i\} = 1 - p\left\lbrace{X > j-1}\right\rbrace\]
+
+\[ = 1-p \left\lbrace{Las\ primeras\ pruebas\ de\ j-1\ son\ todas\ fallas}\right\rbrace\]
+
+\[ = 1 - q^{j-1},\ j\leq1 \]
+
+se puede general el valor de X generando un número aleatorio U y estableciendo X igual al 
+valor j para el cual
+
+\[1- pq^{i-1} \leq U < 1 - q^{j}\]
+ 
+u otra forma equivalente sería 
+
+\[q^{j} < 1 - U \leq q^{j-1}\]
+ 
+por lo que se podría definir a x como 
+
+\[X = Min\{j:q^j <1-U\}\]
+
+usando el hecho de que el logaritmo es una función monótona, por lo que a<b es equivalente a log(a)<log(b), obtenemos que X se puede expresar como:
+
+\[X = Min\{j : j\ log(q) < log(1 - U)\}\]
+
+\[= Min \left\lbrace{ j:j > \frac{log(1-U)}{log(q)}}\right\rbrace\]
+
+Dada la última desigualdad se cambió de signo porque log(q) es negativo para 0<q<1. Por lo que, usando la notación Int() se puede expresar X como:
+
+\[X = int\left(\frac{log(1-U)}{log(q)}\right) + 1\]
+
+al observar que 1−U también está uniformemente distribuido en (0,1), se deduce que
+
+\[x \equiv int\left(\frac{log(U)}{log(q)}\right) + 1\]
+
+también es geométrico con el parámetro p
+
+<b> 3. Implementación </b>
+
+Inicialmente creamos una función la cual nos genere valores aleatorios geométricos, la cual tiene como parámetros n (número de valores a generar) y p.
+
+```{r}
+gen.geometrico<-function(n,p){
+  q=1-p
+  u=runif(n)
+  r=as.integer((log(u)/log(q))+1)
+  return(r)
+}
+```
+
+Al probarla, se obtiene el siguiente resultado:
+
+```{r}
+resultado<-gen.geometrico(10,1/6)
+print(resultado)
+```
+
+Para visualizar si los números que se generan siguen la distribución geométrica, se realiza lo siguiente:
+
+```{r}
+nums<-gen.geometrico(10000,1/6)
+freq <- prop.table(table(nums))
+  plot(freq)
+```
+
+se compara con la gráfica de densidad de la distribución geométrica.
+
+```{r}
+x <- seq(50)
+  plot(x, dgeom(x,1/6), "h")
+```
+
+<b>4. Ejemplo </b>
+
+En cierta region la probabilidad de que ocurra una tormenta en el verano(Enero, Febrero) es 0,1 (dia)
+
+
+a)cual es la probabilidad que la primera tormenta de verano ocurra el 3 de febrero?
+
+b)cual es el numero esperado de dias que pasan hasta quye ocurre la primera tormenta
+
+X: cantidad de dias que pasan hasta que ocurre la primera tormenta
+
+X= geo(p=0.1)
+
+a) La cantidad de dias hasta el 3 de febrero es de 34 por lo tanto pa probabilidad sera: P(X=34)
+
+```{r}
+p=0.1
+i=34
+q=0.9
+P=p*q^(i-1)
+P
+```
+```{r}
+dgeom(i-1,p)
+```
+como se puede observar la probabilidad de que la primera tormenta de verano ocurra el 3 de febrero es de 0,3090315%
+
+
+ 
+b) El numero esperado de dias que pasan hasta que ocurre la primera tormenta es la esperanza de la variable X:
+E(X)
+
+```{r}
+E=1/p
+E
+```
+
+E(X)= 1/p = 10
